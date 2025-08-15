@@ -1,78 +1,149 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-Hans">
 <head>
-<meta charset="UTF-8">
-<title>心经流动</title>
-<style>
-    body {
-        margin: 0;
-        height: 100vh;
-        background-color: #c8d5b9; /* 柔和豆绿色 */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>心经 — 流动大字版</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #c8d5b9; /* 豆绿色 */
+      color: white; /* 白色字体 */
+      overflow: hidden;
+      font-family: "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif;
+      letter-spacing: 0.04em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    #container {
-        position: relative;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        font-size: 80px;
-        font-family: 'KaiTi', serif;
-        color: white;
-        text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* 白色发光效果 */
-    }
-    .char {
-        opacity: 0;
-        transition: opacity 1s, transform 1s;
-    }
-    .char.visible {
-        opacity: 1;
-    }
-    .char.fading {
-        opacity: 0.3;
-        filter: blur(2px);
-    }
-</style>
+    canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet" />
 </head>
 <body>
+  <canvas id="stage"></canvas>
+  <script>
+    const heartSutraRaw = `
+观自在菩萨行深般若波罗蜜多时照见五蕴皆空度一切苦厄
+舍利子色不异空空不异色色即是空空即是色受想行识亦复如是
+舍利子是诸法空相不生不灭不垢不净不增不减
+是故空中无色无受想行识无眼耳鼻舌身意无色声香味触法
+无眼界乃至无意识界无无明亦无无明尽乃至无老死亦无老死尽
+无苦集灭道无智亦无得以无所得故
+菩提萨埵依般若波罗蜜多故心无罣碍无罣碍故无有恐怖
+远离颠倒梦想究竟涅槃
+三世诸佛依般若波罗蜜多故得阿耨多罗三藐三菩提
+故知般若波罗蜜多是大神咒是大明咒是无上咒是无等等咒
+能除一切苦真实不虚
+故说般若波罗蜜多咒即说咒曰
+揭谛揭谛波罗揭谛波罗僧揭谛菩提萨婆诃
+    `.trim();
 
-<div id="container"></div>
+    const CHARS = Array.from(heartSutraRaw.replace(/[^\u4e00-\u9fff]/g, ""));
+    const LOOP_GAP = 10;
 
-<script>
-const text = "观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空，度一切苦厄。舍利子，色不异空，空不异色，色即是空，空即是色，受想行识，亦复如是。舍利子，是诸法空相，不生不灭，不垢不净，不增不减。是故空中无色，无受想行识，无眼耳鼻舌身意，无色声香味触法，无眼界，乃至无意识界，无无明，亦无无明尽，乃至无老死，亦无老死尽，无苦集灭道，无智亦无得，以无所得故。菩提萨埵，依般若波罗蜜多故，心无挂碍。无挂碍故，无有恐怖，远离颠倒梦想，究竟涅槃。三世诸佛，依般若波罗蜜多故，得阿耨多罗三藐三菩提。故知般若波罗蜜多，是大神咒，是大明咒，是无上咒，是无等等咒，能除一切苦，真实不虚。故说般若波罗蜜多咒，即说咒曰，揭谛揭谛，波罗揭谛，波罗僧揭谛，菩提萨婆诃。";
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    let DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
 
-const container = document.getElementById('container');
+    const BASE = {
+      fontPx: 180,
+      line: 200,
+      cpm: 50,
+      blurPerStep: 1.2,
+      fadeReach: 1.5,
+      weight: 600
+    };
 
-let index = 0;
+    let playing = true;
+    let idx = -2;
+    let last = performance.now();
 
-function showChar() {
-    const charElement = document.createElement('div');
-    charElement.textContent = text[index];
-    charElement.className = 'char';
-    container.appendChild(charElement);
-
-    setTimeout(() => charElement.classList.add('visible'), 50);
-
-    // 让前一个字符变淡模糊
-    if (container.children.length > 1) {
-        const prevChar = container.children[container.children.length - 2];
-        prevChar.classList.add('fading');
+    function fit() {
+      const { innerWidth: w, innerHeight: h } = window;
+      DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+      canvas.width = Math.floor(w * DPR);
+      canvas.height = Math.floor(h * DPR);
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      BASE.fontPx = Math.max(100, h / 3.3);
+      BASE.line = Math.floor(BASE.fontPx * 1.1);
     }
 
-    // 超过 6 个字符后移除最上面的
-    if (container.children.length > 6) {
-        container.removeChild(container.firstChild);
+    function draw(now) {
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
+      last = now;
+
+      if (playing) {
+        const cps = BASE.cpm / 60;
+        idx += cps * dt;
+      }
+
+      const W = canvas.width / DPR;
+      const H = canvas.height / DPR;
+      ctx.clearRect(0, 0, W, H);
+
+      // 背景改成柔和豆绿色
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#c8d5b9");
+      g.addColorStop(1, "#c8d5b9");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      const centerY = H / 2;
+      const centerX = W / 2;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const total = CHARS.length + LOOP_GAP;
+      if (idx >= total) idx -= total;
+
+      const reach = Math.ceil(BASE.fadeReach) + 2;
+      for (let k = -reach; k <= reach; k++) {
+        const pos = Math.floor(idx) + k;
+        let ch = "";
+        if (pos >= 0 && pos < total) {
+          if (pos < CHARS.length) ch = CHARS[pos];
+        } else {
+          let p = ((pos % total) + total) % total;
+          if (p < CHARS.length) ch = CHARS[p];
+        }
+        const frac = idx - Math.floor(idx);
+        const y = centerY + (k - frac) * BASE.line;
+
+        const d = Math.abs((y - centerY) / BASE.line);
+        const alpha = Math.max(0, 1 - (d / BASE.fadeReach) ** 1.6);
+
+        if (!ch) continue;
+
+        const size = BASE.fontPx;
+        ctx.font = `${BASE.weight} ${size}px "Noto Serif SC", serif`;
+        const blur = Math.min(8, d * BASE.blurPerStep);
+        ctx.filter = blur > 0.2 ? `blur(${blur}px)` : "none";
+
+        // 白色发光
+        ctx.shadowColor = "rgba(255,255,255,0.8)";
+        ctx.shadowBlur = 30;
+
+        ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+        ctx.fillText(ch, centerX, y);
+      }
+
+      requestAnimationFrame(draw);
     }
 
-    index = (index + 1) % text.length;
-}
+    window.addEventListener("resize", fit);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); playing = !playing; }
+      if (e.key === "ArrowUp")   { e.preventDefault(); BASE.cpm = Math.min(120, BASE.cpm + 2); }
+      if (e.key === "ArrowDown") { e.preventDefault(); BASE.cpm = Math.max(10,  BASE.cpm - 2); }
+    });
 
-setInterval(showChar, 800);
-</script>
-
+    fit();
+    requestAnimationFrame((t) => { last = t; draw(t); });
+  </script>
 </body>
 </html>

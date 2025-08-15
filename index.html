@@ -1,145 +1,92 @@
 <!DOCTYPE html>
-<html lang="zh-Hans">
+<html lang="zh">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>心经 — 流动大字版</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: #0b0b0c;
-      color: #f2efe7;
-      overflow: hidden;
-      font-family: "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif;
-      letter-spacing: 0.04em;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心经流动版</title>
+<style>
+    body {
+        margin: 0;
+        background-color: #c7d8c0; /* 柔和豆绿色背景 */
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
-    canvas { display: block; width: 100vw; height: 100vh; }
-  </style>
-  <!-- 可选：更美观的中文衬线字体 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet" />
+
+    .scroll-container {
+        position: relative;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        font-family: "STKaiti", "KaiTi", serif;
+        font-size: 8rem; /* 大字体，保证屏幕上最多看到3个字 */
+        line-height: 1.2;
+        color: rgba(0, 0, 0, 0.8);
+    }
+
+    .char {
+        text-align: center;
+        opacity: 0.2;
+        filter: blur(2px);
+        transition: all 0.5s ease;
+    }
+
+    .char.center {
+        opacity: 1;
+        filter: none;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 
+                     0 0 40px rgba(255, 255, 255, 0.5); /* 柔和发光 */
+    }
+</style>
 </head>
 <body>
-  <canvas id="stage"></canvas>
-  <script>
-    // --- 心经文本（去掉标点） ---
-    const heartSutraRaw = `
-观自在菩萨行深般若波罗蜜多时照见五蕴皆空度一切苦厄
-舍利子色不异空空不异色色即是空空即是色受想行识亦复如是
-舍利子是诸法空相不生不灭不垢不净不增不减
-是故空中无色无受想行识无眼耳鼻舌身意无色声香味触法
-无眼界乃至无意识界无无明亦无无明尽乃至无老死亦无老死尽
-无苦集灭道无智亦无得以无所得故
-菩提萨埵依般若波罗蜜多故心无罣碍无罣碍故无有恐怖
-远离颠倒梦想究竟涅槃
-三世诸佛依般若波罗蜜多故得阿耨多罗三藐三菩提
-故知般若波罗蜜多是大神咒是大明咒是无上咒是无等等咒
-能除一切苦真实不虚
-故说般若波罗蜜多咒即说咒曰
-揭谛揭谛波罗揭谛波罗僧揭谛菩提萨婆诃
-    `.trim();
 
-    const CHARS = Array.from(heartSutraRaw.replace(/[^\u4e00-\u9fff]/g, ""));
-    const LOOP_GAP = 10; // 空白间隔
+<div class="scroll-container" id="scrollContainer"></div>
 
-    const canvas = document.getElementById("stage");
-    const ctx = canvas.getContext("2d");
-    let DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+<script>
+const text = "观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空，度一切苦厄……"; // 可替换为完整心经
+const container = document.getElementById("scrollContainer");
 
-    const BASE = {
-      fontPx: 180,
-      line: 200,
-      cpm: 50,         // 字/分钟
-      blurPerStep: 1.2,
-      fadeReach: 1.5,  // 上下只各显示一个字
-      weight: 600
-    };
+// 把每个字拆分成 div
+const chars = text.split("").map(ch => {
+    const span = document.createElement("div");
+    span.className = "char";
+    span.textContent = ch;
+    container.appendChild(span);
+    return span;
+});
 
-    let playing = true;
-    let idx = -2;
-    let last = performance.now();
-
-    function fit() {
-      const { innerWidth: w, innerHeight: h } = window;
-      DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-      canvas.width = Math.floor(w * DPR);
-      canvas.height = Math.floor(h * DPR);
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      BASE.fontPx = Math.max(100, h / 3.3);
-      BASE.line = Math.floor(BASE.fontPx * 1.1);
-    }
-
-    function draw(now) {
-      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
-      last = now;
-
-      if (playing) {
-        const cps = BASE.cpm / 60;
-        idx += cps * dt;
-      }
-
-      const W = canvas.width / DPR;
-      const H = canvas.height / DPR;
-      ctx.clearRect(0, 0, W, H);
-
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, "#0b0b0c");
-      g.addColorStop(1, "#0e0e10");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-
-      const centerY = H / 2;
-      const centerX = W / 2;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      const total = CHARS.length + LOOP_GAP;
-      if (idx >= total) idx -= total;
-
-      const reach = Math.ceil(BASE.fadeReach) + 2;
-      for (let k = -reach; k <= reach; k++) {
-        const pos = Math.floor(idx) + k;
-        let ch = "";
-        if (pos >= 0 && pos < total) {
-          if (pos < CHARS.length) ch = CHARS[pos];
-        } else {
-          let p = ((pos % total) + total) % total;
-          if (p < CHARS.length) ch = CHARS[p];
-        }
-        const frac = idx - Math.floor(idx);
-        const y = centerY + (k - frac) * BASE.line;
-
-        const d = Math.abs((y - centerY) / BASE.line);
-        const alpha = Math.max(0, 1 - (d / BASE.fadeReach) ** 1.6);
-
-        if (!ch) continue;
-
-        const size = BASE.fontPx;
-        ctx.font = `${BASE.weight} ${size}px "Noto Serif SC", serif`;
-        const blur = Math.min(8, d * BASE.blurPerStep);
-        ctx.filter = blur > 0.2 ? `blur(${blur}px)` : "none";
-        ctx.fillStyle = `rgba(242,239,231,${alpha.toFixed(3)})`;
-        ctx.fillText(ch, centerX, y);
-      }
-
-      requestAnimationFrame(draw);
-    }
-
-    window.addEventListener("resize", fit);
-    window.addEventListener("keydown", (e) => {
-      if (e.code === "Space") { e.preventDefault(); playing = !playing; }
-      if (e.key === "ArrowUp")   { e.preventDefault(); BASE.cpm = Math.min(120, BASE.cpm + 2); }
-      if (e.key === "ArrowDown") { e.preventDefault(); BASE.cpm = Math.max(10,  BASE.cpm - 2); }
+let index = 0;
+function scrollText() {
+    chars.forEach((span, i) => {
+        span.classList.remove("center");
+        span.style.opacity = "0.2";
+        span.style.filter = "blur(2px)";
     });
 
-    fit();
-    requestAnimationFrame((t) => { last = t; draw(t); });
-  </script>
+    // 当前字为中间的
+    chars[index].classList.add("center");
+
+    // 上一个和下一个稍微清晰一点
+    if (index > 0) chars[index - 1].style.opacity = "0.5";
+    if (index < chars.length - 1) chars[index + 1].style.opacity = "0.5";
+
+    index++;
+    if (index >= chars.length) index = 0;
+
+    // 滚动效果
+    container.style.transform = `translateY(${-index * 1.2}em)`;
+}
+
+// 初始化位置
+container.style.transform = `translateY(0)`;
+
+// 每1秒切换一个字
+setInterval(scrollText, 1000);
+</script>
+
 </body>
 </html>

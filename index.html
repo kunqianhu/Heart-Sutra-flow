@@ -2,90 +2,76 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>心经流动版</title>
+<title>心经流动</title>
 <style>
     body {
         margin: 0;
-        background-color: #c7d8c0; /* 柔和豆绿色背景 */
         height: 100vh;
-        overflow: hidden;
+        background-color: #c8d5b9; /* 柔和豆绿色 */
         display: flex;
         justify-content: center;
         align-items: center;
+        overflow: hidden;
     }
-
-    .scroll-container {
+    #container {
         position: relative;
         height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        font-family: "STKaiti", "KaiTi", serif;
-        font-size: 8rem; /* 大字体，保证屏幕上最多看到3个字 */
-        line-height: 1.2;
-        color: rgba(0, 0, 0, 0.8);
+        justify-content: flex-start;
+        align-items: center;
+        font-size: 80px;
+        font-family: 'KaiTi', serif;
+        color: white;
+        text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* 白色发光效果 */
     }
-
     .char {
-        text-align: center;
-        opacity: 0.2;
-        filter: blur(2px);
-        transition: all 0.5s ease;
+        opacity: 0;
+        transition: opacity 1s, transform 1s;
     }
-
-    .char.center {
+    .char.visible {
         opacity: 1;
-        filter: none;
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 
-                     0 0 40px rgba(255, 255, 255, 0.5); /* 柔和发光 */
+    }
+    .char.fading {
+        opacity: 0.3;
+        filter: blur(2px);
     }
 </style>
 </head>
 <body>
 
-<div class="scroll-container" id="scrollContainer"></div>
+<div id="container"></div>
 
 <script>
-const text = "观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空，度一切苦厄……"; // 可替换为完整心经
-const container = document.getElementById("scrollContainer");
+const text = "观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空，度一切苦厄。舍利子，色不异空，空不异色，色即是空，空即是色，受想行识，亦复如是。舍利子，是诸法空相，不生不灭，不垢不净，不增不减。是故空中无色，无受想行识，无眼耳鼻舌身意，无色声香味触法，无眼界，乃至无意识界，无无明，亦无无明尽，乃至无老死，亦无老死尽，无苦集灭道，无智亦无得，以无所得故。菩提萨埵，依般若波罗蜜多故，心无挂碍。无挂碍故，无有恐怖，远离颠倒梦想，究竟涅槃。三世诸佛，依般若波罗蜜多故，得阿耨多罗三藐三菩提。故知般若波罗蜜多，是大神咒，是大明咒，是无上咒，是无等等咒，能除一切苦，真实不虚。故说般若波罗蜜多咒，即说咒曰，揭谛揭谛，波罗揭谛，波罗僧揭谛，菩提萨婆诃。";
 
-// 把每个字拆分成 div
-const chars = text.split("").map(ch => {
-    const span = document.createElement("div");
-    span.className = "char";
-    span.textContent = ch;
-    container.appendChild(span);
-    return span;
-});
+const container = document.getElementById('container');
 
 let index = 0;
-function scrollText() {
-    chars.forEach((span, i) => {
-        span.classList.remove("center");
-        span.style.opacity = "0.2";
-        span.style.filter = "blur(2px)";
-    });
 
-    // 当前字为中间的
-    chars[index].classList.add("center");
+function showChar() {
+    const charElement = document.createElement('div');
+    charElement.textContent = text[index];
+    charElement.className = 'char';
+    container.appendChild(charElement);
 
-    // 上一个和下一个稍微清晰一点
-    if (index > 0) chars[index - 1].style.opacity = "0.5";
-    if (index < chars.length - 1) chars[index + 1].style.opacity = "0.5";
+    setTimeout(() => charElement.classList.add('visible'), 50);
 
-    index++;
-    if (index >= chars.length) index = 0;
+    // 让前一个字符变淡模糊
+    if (container.children.length > 1) {
+        const prevChar = container.children[container.children.length - 2];
+        prevChar.classList.add('fading');
+    }
 
-    // 滚动效果
-    container.style.transform = `translateY(${-index * 1.2}em)`;
+    // 超过 6 个字符后移除最上面的
+    if (container.children.length > 6) {
+        container.removeChild(container.firstChild);
+    }
+
+    index = (index + 1) % text.length;
 }
 
-// 初始化位置
-container.style.transform = `translateY(0)`;
-
-// 每1秒切换一个字
-setInterval(scrollText, 1000);
+setInterval(showChar, 800);
 </script>
 
 </body>

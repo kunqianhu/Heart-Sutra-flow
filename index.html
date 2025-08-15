@@ -3,116 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>心经 — 逐字流动</title>
+  <title>心经 — 流动大字版</title>
   <style>
-    :root {
-      --bg: #0b0b0c;          /* deep black */
-      --fg: #f2efe7;          /* warm paper */
-      --accent: #d9d1be;
-    }
     html, body {
       height: 100%;
       margin: 0;
-      background: var(--bg);
-      color: var(--fg);
+      background: #0b0b0c;
+      color: #f2efe7;
       overflow: hidden;
       font-family: "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif;
       letter-spacing: 0.04em;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-    /* Subtle vignette to keep focus on the center glyph */
-    .vignette {
-      position: fixed; inset: 0;
-      pointer-events: none;
-      background: radial-gradient(ellipse at 50% 50%,
-                  rgba(0,0,0,0) 40%,
-                  rgba(0,0,0,0.25) 70%,
-                  rgba(0,0,0,0.5) 100%);
-      mix-blend-mode: multiply;
-    }
-    /* Centerlines (very faint) to align the eye on the main character */
-    .guide {
-      position: fixed; inset: 0;
-      pointer-events: none;
-      background:
-        linear-gradient(to bottom,
-          rgba(255,255,255,0) calc(50% - 1px),
-          rgba(255,255,255,0.06) calc(50% - 1px),
-          rgba(255,255,255,0.06) calc(50% + 1px),
-          rgba(255,255,255,0) calc(50% + 1px));
-      opacity: .25;
-    }
-    /* Touch hint (auto-fades) */
-    .hint {
-      position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%);
-      font-size: .9rem; color: #c8c2b4; letter-spacing: .2em; opacity: .65;
-      user-select: none; white-space: nowrap; transition: opacity .6s ease 2s;
-    }
-    .hint.hide { opacity: 0; }
-    /* Minimal control pill (optional, fades out) */
-    .pill {
-      position: fixed; top: .8rem; left: 50%; transform: translateX(-50%);
-      background: rgba(255,255,255,0.06);
-      color: var(--accent);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 999px;
-      padding: .35rem .75rem;
-      font-size: .85rem;
-      letter-spacing: .08em;
-      user-select: none;
-      transition: opacity .6s ease 3s;
-    }
-    .pill.fade { opacity: 0; }
     canvas { display: block; width: 100vw; height: 100vh; }
-    /* Respect prefers-reduced-motion: pause by default */
-    @media (prefers-reduced-motion: reduce) {
-      .pill::after { content: "（系统要求减弱动画：点击以播放）"; }
-    }
   </style>
-  <!-- Optional: nicer Chinese serif. Page works fine without it. -->
+  <!-- 可选：更美观的中文衬线字体 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <canvas id="stage" aria-label="心经逐字滚动"></canvas>
-  <div class="vignette" aria-hidden="true"></div>
-  <div class="guide" aria-hidden="true"></div>
-  <div class="pill" id="pill">点击/空格：播放与暂停　·　↑↓：快/慢</div>
-  <div class="hint" id="hint">上帝视角消失，心字独明 —— 只呈现当下这个字</div>
-
+  <canvas id="stage"></canvas>
   <script>
-    // --- Text (punctuation removed for a pure character flow; set KEEP_PUNCT to true to keep them) ---
-    const KEEP_PUNCT = false;
+    // --- 心经文本（去掉标点） ---
     const heartSutraRaw = `
-观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空，度一切苦厄。
-舍利子，色不异空，空不异色；色即是空，空即是色；受想行识，亦复如是。
-舍利子，是诸法空相，不生不灭，不垢不净，不增不减。
-是故空中无色，无受想行识；无眼耳鼻舌身意；无色声香味触法；
-无眼界，乃至无意识界。无无明，亦无无明尽；乃至无老死，亦无老死尽。
-无苦集灭道，无智亦无得，以无所得故。
-菩提萨埵，依般若波罗蜜多故，心无罣碍；无罣碍故，无有恐怖，
-远离颠倒梦想，究竟涅槃。
-三世诸佛，依般若波罗蜜多故，得阿耨多罗三藐三菩提。
-故知般若波罗蜜多，是大神咒，是大明咒，是无上咒，是无等等咒，
-能除一切苦，真实不虚。
-故说般若波罗蜜多咒，即说咒曰：
-揭谛揭谛，波罗揭谛，波罗僧揭谛，菩提萨婆诃。
+观自在菩萨行深般若波罗蜜多时照见五蕴皆空度一切苦厄
+舍利子色不异空空不异色色即是空空即是色受想行识亦复如是
+舍利子是诸法空相不生不灭不垢不净不增不减
+是故空中无色无受想行识无眼耳鼻舌身意无色声香味触法
+无眼界乃至无意识界无无明亦无无明尽乃至无老死亦无老死尽
+无苦集灭道无智亦无得以无所得故
+菩提萨埵依般若波罗蜜多故心无罣碍无罣碍故无有恐怖
+远离颠倒梦想究竟涅槃
+三世诸佛依般若波罗蜜多故得阿耨多罗三藐三菩提
+故知般若波罗蜜多是大神咒是大明咒是无上咒是无等等咒
+能除一切苦真实不虚
+故说般若波罗蜜多咒即说咒曰
+揭谛揭谛波罗揭谛波罗僧揭谛菩提萨婆诃
     `.trim();
 
-    const source = KEEP_PUNCT
-      ? heartSutraRaw.replace(/\s+/g, "")
-      : heartSutraRaw.replace(/[^\u4e00-\u9fff]/g, "");  // keep only CJK
+    const CHARS = Array.from(heartSutraRaw.replace(/[^\u4e00-\u9fff]/g, ""));
+    const LOOP_GAP = 10; // 空白间隔
 
-    const CHARS = Array.from(source);
-    // Repeat a little spacing between loops to breathe
-    const LOOP_GAP = 10; // extra blank "chars" between loops
-
-    // --- Canvas setup with HiDPI scaling ---
     const canvas = document.getElementById("stage");
     const ctx = canvas.getContext("2d");
     let DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+    const BASE = {
+      fontPx: 180,
+      line: 200,
+      cpm: 50,         // 字/分钟
+      blurPerStep: 1.2,
+      fadeReach: 1.5,  // 上下只各显示一个字
+      weight: 600
+    };
+
+    let playing = true;
+    let idx = -2;
+    let last = performance.now();
 
     function fit() {
       const { innerWidth: w, innerHeight: h } = window;
@@ -122,151 +71,75 @@
       canvas.style.width = w + "px";
       canvas.style.height = h + "px";
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      // choose a font size that makes the center character big but with room for fading neighbors
-      BASE.fontPx = Math.max(64, Math.min(w, h) * 0.16);
-      BASE.line = Math.floor(BASE.fontPx * 1.15);
+      BASE.fontPx = Math.max(100, h / 3.3);
+      BASE.line = Math.floor(BASE.fontPx * 1.1);
     }
 
-    // --- Parameters (tweakables) ---
-    const BASE = {
-      fontPx: 120,       // live-adjusted in fit()
-      line: 138,         // line height (px)
-      cpm: 50,           // characters per minute (slow, ~1.2s per char)
-      blurPerStep: 1.2,  // blur grows with distance from center
-      fadeReach: 6.5,    // how many steps from center until fully faded
-      weight: 600        // font weight for center clarity
-    };
-
-    let playing = true;
-    // Respect prefers-reduced-motion: start paused
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) playing = false;
-
-    let idx = -2; // fractional index; negative gives a calm intro
-    let last = performance.now();
-
     function draw(now) {
-      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); // clamp to avoid jumps
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
       last = now;
 
       if (playing) {
-        const cps = BASE.cpm / 60; // characters per second
-        idx += cps * dt; // increase -> text moves downward (top -> center -> bottom)
+        const cps = BASE.cpm / 60;
+        idx += cps * dt;
       }
 
       const W = canvas.width / DPR;
       const H = canvas.height / DPR;
       ctx.clearRect(0, 0, W, H);
 
-      // Fill background (solid plus very subtle vertical gradient for depth)
       const g = ctx.createLinearGradient(0, 0, 0, H);
       g.addColorStop(0, "#0b0b0c");
       g.addColorStop(1, "#0e0e10");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
 
-      // Calculate centerline and which characters to draw around it
       const centerY = H / 2;
       const centerX = W / 2;
-
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const total = CHARS.length + LOOP_GAP;
-      // wrap idx to loop seamlessly with breathing space
       if (idx >= total) idx -= total;
 
-      // Draw neighbors around the fractional index
-      const reach = Math.ceil(BASE.fadeReach) + 3;
+      const reach = Math.ceil(BASE.fadeReach) + 2;
       for (let k = -reach; k <= reach; k++) {
         const pos = Math.floor(idx) + k;
-        // compute which "virtual char" to show at this pos (with loop + blanks)
         let ch = "";
         if (pos >= 0 && pos < total) {
           if (pos < CHARS.length) ch = CHARS[pos];
-          else ch = ""; // gap
         } else {
-          // wrap-around indices
           let p = ((pos % total) + total) % total;
           if (p < CHARS.length) ch = CHARS[p];
-          else ch = "";
         }
         const frac = idx - Math.floor(idx);
         const y = centerY + (k - frac) * BASE.line;
 
-        // distance (in line steps) from center; controls alpha & blur & size
         const d = Math.abs((y - centerY) / BASE.line);
-
-        // fade function: smoothstep-like falloff
         const alpha = Math.max(0, 1 - (d / BASE.fadeReach) ** 1.6);
 
-        if (!ch) {
-          // draw nothing in the gap
-          continue;
-        }
+        if (!ch) continue;
 
-        // Size interpolation: center is biggest, edges slightly smaller
-        const size = BASE.fontPx * (1 - 0.06 * Math.min(d, 3));
-        ctx.font = `${BASE.weight} ${size}px "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif`;
-
-        // Blur increases with distance; center stays crisp
+        const size = BASE.fontPx;
+        ctx.font = `${BASE.weight} ${size}px "Noto Serif SC", serif`;
         const blur = Math.min(8, d * BASE.blurPerStep);
         ctx.filter = blur > 0.2 ? `blur(${blur}px)` : "none";
-
-        // Slight color dim toward edges
-        const col = `rgba(242,239,231,${alpha.toFixed(3)})`;
-        ctx.fillStyle = col;
-
+        ctx.fillStyle = `rgba(242,239,231,${alpha.toFixed(3)})`;
         ctx.fillText(ch, centerX, y);
-      }
-
-      // Draw a crisp center character again on top to ensure perfect sharpness
-      {
-        const mainIdx = Math.floor(idx + 0.5); // whichever is nearest to center
-        const m = ((mainIdx % total) + total) % total;
-        let ch = "";
-        if (m < CHARS.length) ch = CHARS[m];
-        if (ch) {
-          const size = BASE.fontPx * 1.0;
-          ctx.filter = "none";
-          ctx.font = `600 ${size}px "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif`;
-          ctx.fillStyle = "#f2efe7";
-          ctx.fillText(ch, centerX, H / 2);
-        }
       }
 
       requestAnimationFrame(draw);
     }
 
-    // Controls
-    function togglePlay() { playing = !playing; pill.classList.remove("fade"); }
-    function speedUp()    { BASE.cpm = Math.min(120, Math.round((BASE.cpm + 2) * 10) / 10); pillFlash(); }
-    function slowDown()   { BASE.cpm = Math.max(10,  Math.round((BASE.cpm - 2) * 10) / 10); pillFlash(); }
-
-    function pillFlash() {
-      pill.textContent = `速度：${Math.round(BASE.cpm)} 字/分钟　·　点击/空格：播放与暂停　·　↑↓：快/慢`;
-      pill.classList.remove("fade");
-      clearTimeout(pill._t);
-      pill._t = setTimeout(() => pill.classList.add("fade"), 2200);
-    }
-
-    const pill = document.getElementById("pill");
-    const hint = document.getElementById("hint");
-
-    // Events
     window.addEventListener("resize", fit);
     window.addEventListener("keydown", (e) => {
-      if (e.code === "Space") { e.preventDefault(); togglePlay(); }
-      if (e.key === "ArrowUp")   { e.preventDefault(); speedUp(); }
-      if (e.key === "ArrowDown") { e.preventDefault(); slowDown(); }
+      if (e.code === "Space") { e.preventDefault(); playing = !playing; }
+      if (e.key === "ArrowUp")   { e.preventDefault(); BASE.cpm = Math.min(120, BASE.cpm + 2); }
+      if (e.key === "ArrowDown") { e.preventDefault(); BASE.cpm = Math.max(10,  BASE.cpm - 2); }
     });
-    window.addEventListener("pointerdown", () => togglePlay(), { passive: true });
 
-    // Init
     fit();
     requestAnimationFrame((t) => { last = t; draw(t); });
-    // Fade out helper UI
-    setTimeout(() => pill.classList.add("fade"), 3000);
-    setTimeout(() => hint.classList.add("hide"), 3000);
   </script>
 </body>
 </html>

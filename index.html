@@ -9,7 +9,7 @@
       height: 100%;
       margin: 0;
       background: #c8d5b9; /* 豆绿色背景 */
-      color: white; /* 白色文字 */
+      color: white;
       overflow: hidden;
       font-family: "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif;
       letter-spacing: 0.04em;
@@ -58,8 +58,8 @@
     };
 
     let playing = true;
-    let idx = -2;
     let last = performance.now();
+    let pixelOffset = 0; // Pixel-based scroll
 
     function fit() {
       const { innerWidth: w, innerHeight: h } = window;
@@ -78,21 +78,17 @@
       last = now;
 
       if (playing) {
-        const cps = BASE.cpm / 60;
-        // --- Smooth scrolling fix: scale speed by font size ---
-        const speedFactor = BASE.fontPx / 180;
-        idx += cps * dt * speedFactor;
+        // Pixel-per-second scroll
+        const pixelsPerSecond = (BASE.cpm / 60) * BASE.line;
+        pixelOffset += pixelsPerSecond * dt;
       }
 
       const W = canvas.width / DPR;
       const H = canvas.height / DPR;
       ctx.clearRect(0, 0, W, H);
 
-      // 背景：豆绿色
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, "#c8d5b9");
-      g.addColorStop(1, "#c8d5b9");
-      ctx.fillStyle = g;
+      // Background
+      ctx.fillStyle = "#c8d5b9";
       ctx.fillRect(0, 0, W, H);
 
       const centerY = H / 2;
@@ -101,11 +97,11 @@
       ctx.textBaseline = "middle";
 
       const total = CHARS.length + LOOP_GAP;
-      if (idx >= total) idx -= total;
+      const offsetInLine = pixelOffset % BASE.line;
 
       const reach = Math.ceil(BASE.fadeReach) + 2;
       for (let k = -reach; k <= reach; k++) {
-        const pos = Math.floor(idx) + k;
+        let pos = Math.floor(pixelOffset / BASE.line) + k;
         let ch = "";
         if (pos >= 0 && pos < total) {
           if (pos < CHARS.length) ch = CHARS[pos];
@@ -113,20 +109,17 @@
           let p = ((pos % total) + total) % total;
           if (p < CHARS.length) ch = CHARS[p];
         }
-        const frac = idx - Math.floor(idx);
-        const y = centerY + (k - frac) * BASE.line;
 
+        const y = centerY + k * BASE.line - offsetInLine;
         const d = Math.abs((y - centerY) / BASE.line);
         const alpha = Math.max(0, 1 - (d / BASE.fadeReach) ** 1.6);
 
         if (!ch) continue;
 
-        const size = BASE.fontPx;
-        ctx.font = `${BASE.weight} ${size}px "Noto Serif SC", serif`;
+        ctx.font = `${BASE.weight} ${BASE.fontPx}px "Noto Serif SC", serif`;
         const blur = Math.min(8, d * BASE.blurPerStep);
         ctx.filter = blur > 0.2 ? `blur(${blur}px)` : "none";
 
-        // 白色发光
         ctx.shadowColor = "rgba(255,255,255,0.8)";
         ctx.shadowBlur = 30;
 

@@ -8,8 +8,8 @@
     html, body {
       height: 100%;
       margin: 0;
-      background: #c8d5b9; /* 豆绿色 */
-      color: white; /* 白色字体 */
+      background: #c8d5b9; /* 豆绿色背景 */
+      color: white; /* 白色文字 */
       overflow: hidden;
       font-family: "Noto Serif SC", "Songti SC", "STSong", "Kaiti SC", "STKaiti", serif;
       letter-spacing: 0.04em;
@@ -79,14 +79,16 @@
 
       if (playing) {
         const cps = BASE.cpm / 60;
-        idx += cps * dt;
+        // --- Smooth scrolling fix: scale speed by font size ---
+        const speedFactor = BASE.fontPx / 180;
+        idx += cps * dt * speedFactor;
       }
 
       const W = canvas.width / DPR;
       const H = canvas.height / DPR;
       ctx.clearRect(0, 0, W, H);
 
-      // 背景改成柔和豆绿色
+      // 背景：豆绿色
       const g = ctx.createLinearGradient(0, 0, 0, H);
       g.addColorStop(0, "#c8d5b9");
       g.addColorStop(1, "#c8d5b9");
